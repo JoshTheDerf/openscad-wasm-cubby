@@ -1,0 +1,18 @@
+Meson identifies emcc as compiler id 'emscripten', not 'clang', so glib's
+probe for which unsigned type size_t is a typedef of was skipped and gsize
+fell back to the first type of the same width ('unsigned int'). Emscripten's
+size_t is 'unsigned long' (both 32 bits on wasm32), so passing a gsize* where
+a size_t* is expected fails with -Werror=incompatible-pointer-types (e.g.
+glib/gconvert.c). Run the probe for emcc too; it is clang underneath.
+
+--- a/meson.build
++++ b/meson.build
+@@ -1786,7 +1786,7 @@
+ # Do separate checks for gcc/clang (and ignore other compilers for now), since
+ # we need to explicitly pass -Werror to the compilers.
+ # FIXME: https://github.com/mesonbuild/meson/issues/5399
+-if cc.get_id() == 'gcc' or cc.get_id() == 'clang'
++if cc.get_id() == 'gcc' or cc.get_id() == 'clang' or cc.get_id() == 'emscripten'
+   foreach type_name, size_compatibility : g_sizet_compatibility
+     g_sizet_compatibility += { type_name: size_compatibility and
+       cc.compiles(
